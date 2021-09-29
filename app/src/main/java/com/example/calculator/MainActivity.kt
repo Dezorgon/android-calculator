@@ -1,66 +1,38 @@
 package com.example.calculator
 
-import android.content.Context
-import android.content.res.Configuration
-import android.os.Build
+import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.view.View
 import android.widget.Button
-import android.widget.TextView
+import androidx.activity.viewModels
+import com.example.calculator.databinding.ActivityMainBinding
 import net.objecthunter.exp4j.ExpressionBuilder
 
+
 class MainActivity : AppCompatActivity() {
+    lateinit var binding: ActivityMainBinding
+    private val resultViewModel: ResultViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
+        supportFragmentManager
+            .beginTransaction()
+            .replace(R.id.fragmentContainerView, KeypadFragment())
+            .commit()
 
-        btn_decimal.setOnClickListener {
-            if (formula.text.isBlank() ||
-                (!formula.text.last().isDigit() && formula.text.last() != '.')) {
-                formula.append("0.")
-            }
+        resultViewModel.result.observe(this, { binding.result.text = it})
+        resultViewModel.formula.observe(this, { binding.formula.text = it})
 
-            if (formula.text.last().isDigit()) {
-                var flg = true
-                for (i in formula.text.length-1 downTo 0) {
-                    if(formula.text[i] == '.'){
-                        flg = false
-                        break
-                    }
-                    if (!formula.text[i].isDigit()) {
-                        break
-                    }
-                }
-                if (flg)
-                    formula.append(".")
-            }
-        }
-
-        btn_clear.setOnLongClickListener {
-            formula.text = ""
-            result.text = ""
-            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            if (vibrator.hasVibrator()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(
-                        VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
-                } else {
-                    vibrator.vibrate(100)
-                }
-            }
-            return@setOnLongClickListener true
-        }
-
-        btn_equals.setOnClickListener {
-            formula.text = result.text
-            result.text = ""
-        }
-
+        /*val versionCode = BuildConfig.VERSION_CODE
+        val versionName = BuildConfig.VERSION_NAME*/
+        val manager = this.packageManager
+        val info = manager.getPackageInfo(this.packageName, PackageManager.GET_ACTIVITIES)
+        setTitle(info.versionName);
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -75,19 +47,24 @@ class MainActivity : AppCompatActivity() {
         result.text = savedInstanceState.getCharSequence("result")
     }
 
-    fun appendToInput(txt: CharSequence){
+    private fun appendToInput(txt: CharSequence){
         formula.append(txt)
         showResult()
     }
 
     private fun showResult() {
-        if (formula.text.isBlank() || formula.text.last().isDigit())
+        if (formula.text.isBlank() ||
+            formula.text.last().isDigit() ||
+            formula.text.last() == ')' ||
+            formula.text.last() == 'π' ||
+            formula.text.last() == 'e')
             try {
                 val input = StringBuilder(
                     formula.text.toString()
-                    .replace('÷', '/')
-                    .replace('×', '*')
-                    .replace("√", "sqrt"))
+                        .replace('÷', '/')
+                        .replace('×', '*')
+                        .replace("√", "sqrt")
+                        .replace("ln", "log10"))
 
                 if ("sqrt" in input){
                     var ind = input.indexOf("sqrt") + 4
@@ -122,6 +99,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 result.text = ""
             }
+        resultViewModel.result.value = result.text as String
     }
 
     fun onDigit(view: View) {
@@ -132,10 +110,19 @@ class MainActivity : AppCompatActivity() {
     fun onOp(view: View) {
         val btn = view as Button
 
-        if (btn.text.last() == '√')
+        if (btn.text.lastOrNull() == '√')
             formula.append(btn.text)
 
-        if (formula.text.isBlank()) {
+        if (formula.text.lastOrNull() == ')' ||
+            formula.text.lastOrNull() == 'π' ||
+            formula.text.lastOrNull() == 'e'){
+            formula.append(btn.text)
+            return
+        }
+
+        if (formula.text.isBlank() ||
+            formula.text.last() == '(' ||
+            formula.text.last() == '√') {
             if (btn.text.last() == '-')
                 formula.append(btn.text)
             return
@@ -158,12 +145,26 @@ class MainActivity : AppCompatActivity() {
             formula.append(btn.text)
     }
 
+    fun onTrigonometric(view: View){
+        val btn = view as Button
+        appendToInput(btn.text)
+        appendToInput("(")
+    }
+
+    fun onConstant(view: View){
+        val btn = view as Button
+        appendToInput(btn.text)
+    }
+
+    fun onBracket(view: View){
+        val btn = view as Button
+        appendToInput(btn.text)
+    }
+
     fun onClear(view: View) {
         if (formula.text.length > 0)
             formula.text = formula.text.subSequence(0, formula.text.length-1)
 
         showResult()
     }
-
-
 }
