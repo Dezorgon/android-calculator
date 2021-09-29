@@ -16,20 +16,10 @@ import net.objecthunter.exp4j.ExpressionBuilder
 import android.content.res.Configuration
 
 
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-
 class KeypadFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
         }
     }
 
@@ -246,7 +236,6 @@ class KeypadFragment : Fragment() {
                 else
                     resultViewModel.result.value = res.toString()
 
-                //result = input.toString()
             } catch (e: Exception) {
                 resultViewModel.result.value = ""
             }
@@ -258,8 +247,6 @@ class KeypadFragment : Fragment() {
         fun newInstance(param1: String, param2: String) =
             KeypadFragment().apply {
                 arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
                 }
             }
     }
